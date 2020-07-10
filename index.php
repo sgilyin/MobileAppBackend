@@ -23,17 +23,6 @@ spl_autoload_register(function ($class) {
     include 'classes/' . $class . '.class.php';
 });
 
-/*
-switch ($requestMethodString = filter_input(INPUT_SERVER, 'REQUEST_METHOD')){
-    case 'GET':
-        $requestMethod = INPUT_GET;
-        break;
-    case 'POST':
-        $requestMethod = INPUT_POST;
-        break;
-}
-*/
-
 switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
     case 'application/json':
         $requestHost = filter_input(INPUT_SERVER, 'REMOTE_ADDR');
