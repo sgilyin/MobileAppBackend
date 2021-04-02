@@ -24,7 +24,9 @@
  */
 class BGBilling {
     public static function getContractInformation($requestJson){
-        if ($contract = static::checkAccess($requestJson->contract, $requestJson->password)){
+        preg_match ('/^([A,B]\d{5})|(\d{5})$/', $requestJson->contract, $matches);
+        $contractTitle = (empty($matches[1])) ? static::getContractTitle($matches[2]) : $matches[1];
+        if ($contract = static::checkAccess($contractTitle, $requestJson->password)){
             $responseSuccess = true;
             $responseMessage = '';
             $responseData['id'] = $contract->id;
@@ -71,6 +73,15 @@ class BGBilling {
         } else {
             return false;
         }
+    }
+
+    private static function getContractTitle($cid) {
+        $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
+        $param->class = 'ContractService';
+        $param->method = 'contractGet';
+        $param->params['contractId'] = $cid;
+        $json = static::execute($param);
+        return $json->data->return->title;
     }
 
     private static function getContractParameter($cid, $paramId) {
