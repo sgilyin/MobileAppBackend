@@ -29,11 +29,16 @@ switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
         $requestID = filter_input(INPUT_SERVER, 'REQUEST_ID');
         $requestJson = json_decode(file_get_contents("php://input"));
         header("Content-type: application/json; charset=utf-8");
-        echo BGBilling::getContractInformation($requestJson);
+        if (isset($requestJson->session->skill_id)) {
+            echo BGBilling::getBalanceYandex($requestJson);
+        } else {
+            echo BGBilling::getContractInformation($requestJson);
+        }
 //        file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
         break;
 
     default:
         echo 'Silent is golden!';
+//        file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
         break;
 }

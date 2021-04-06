@@ -132,4 +132,36 @@ class BGBilling {
         $last_pay = end($json->data->return);
         return $last_pay->date . " | " . $last_pay->sum . ' руб.';
     }
+
+    public static function getBalanceYandex($requestJson){
+        preg_match ('/([A,B]\d{5})|(\d{5})$/', preg_replace('/[[:space:]]/', '', $requestJson->request->command), $matches);
+        $balance = static::getCurrentBalance($matches[2]);
+//        $balanceText = (empty($balance)) ? 'Ваш баланс получить не удалось. Уточните лицевой счет, пожалуйста.' : "Ваш баланс в рублях: $balance";
+        $balanceText = (empty($balance)) ? 'Для получения баланса сообщите лицевой счет, указанный в договоре' : "Ваш баланс в рублях: $balance";
+        $response['response']['text'] = $balanceText;
+        $response['response']['end_session'] = (empty($balance)) ? false : true;
+        $response['version'] = '1.0';
+//        
+//        $contractTitle = (empty($matches[1])) ? static::getContractTitle($matches[2]) : $matches[1];
+//        if ($contract = static::checkAccess($contractTitle, $requestJson->password)){
+//            $responseSuccess = true;
+//            $responseMessage = '';
+//            $responseData['id'] = $contract->id;
+//            $responseData['pay_code'] = 1000000000 + $contract->id;
+//            $responseData['title'] = $contract->title;
+//            $responseData['status'] = ($contract->status == 0) ? 'Активен' : 'Не активен';
+//            $responseData['subscriber'] = static::getContractParameter($contract->id, 1)->value;
+//            $responseData['address'] = static::getContractParameter($contract->id, 12)->title;
+//            $responseData['balance'] = static::getCurrentBalance($contract->id);
+//            $responseData['tariff'] = static::getContractTariff($contract->id);
+//            $responseData['last_pay'] = static::getLastPay($contract->id);
+//        } else {
+//            $responseSuccess = false;
+//            $responseMessage = 'Wrong contract number or password';
+//        }
+//        $response['success'] = $responseSuccess;
+//        $response['message'] = $responseMessage;
+//        $response['data'] = $responseData ?? false;
+        return json_encode($response);
+    }
 }
