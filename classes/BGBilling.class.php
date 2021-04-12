@@ -139,7 +139,9 @@ class BGBilling {
         $balanceText = (empty($balance)) ? 'Для получения баланса отправьте лицевой счет из десяти цифр, указанный в договоре. Также можно отправить часть кода, идущую после нулей.' : "Ваш баланс в рублях: $balance";
         $response['response']['text'] = $balanceText;
         $response['response']['end_session'] = (empty($balance)) ? false : true;
+//        $response['response']['end_session'] = true;
         $response['version'] = '1.0';
+        $response['session'] = $requestJson->session;
 
         return json_encode($response);
     }

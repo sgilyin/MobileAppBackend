@@ -24,6 +24,7 @@ spl_autoload_register(function ($class) {
 });
 
 switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
+    case 'application/json;charset=utf-8':
     case 'application/json':
         $requestHost = filter_input(INPUT_SERVER, 'REMOTE_ADDR');
         $requestID = filter_input(INPUT_SERVER, 'REQUEST_ID');
