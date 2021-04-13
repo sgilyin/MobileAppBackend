@@ -135,7 +135,7 @@ class BGBilling {
 
     public static function getBalanceYandex($requestJson){
         preg_match ('/([A,B]\d{4,5})|(\d{1,5})$/', preg_replace('/\D/', '', $requestJson->request->command), $matches);
-        $balance = static::getCurrentBalance($matches[2]);
+        $balance = (empty($matches[2])) ? null : static::getCurrentBalance($matches[2]);
         $balanceText = (empty($balance)) ? 'Для получения баланса отправьте лицевой счет из десяти цифр, указанный в договоре. Также можно отправить часть кода, идущую после нулей.' : "Ваш баланс в рублях: $balance";
         $response['response']['text'] = $balanceText;
         $response['response']['end_session'] = (empty($balance)) ? false : true;
