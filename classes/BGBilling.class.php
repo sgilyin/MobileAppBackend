@@ -145,4 +145,160 @@ class BGBilling {
 
         return json_encode($response);
     }
+
+    public static function sixMonthsClose() {
+        $wCTVTariffs = array(169);
+        $sql = '
+SELECT contract_status.cid FROM contract_status
+LEFT JOIN contract_module ON contract_status.cid=contract_module.cid 
+WHERE (contract_module.mid=15)AND((contract_status.date2 IS NULL)OR(contract_status.date2 >CURDATE()))AND(contract_status.status<>0)AND(DATEDIFF(CURDATE(),contract_status.date1)>180) 
+ORDER BY DATEDIFF(CURDATE(),contract_status.date1) DESC 
+LIMIT 1000
+';
+        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . 
+            BGB_USER . '&pswd=' . BGB_PASSWORD . 
+            '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($sql);
+
+        $xml = simplexml_load_string(file_get_contents($url));
+        for ($i=0;count($xml->table->data->row)>$i;$i++) {
+            $cid = (int) $xml->table->data->row[$i]->attributes()->row0;
+            file_put_contents(date("Ymd") . '_six_inet.log', PHP_EOL . "Working with cid $cid:" . PHP_EOL, FILE_APPEND);
+            $inetServList = static::inetServList($cid);
+            for ($i=0; $i<count($inetServList->data->return); $i++) {
+                static::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$i]->deviceTitle} | {$inetServList->data->return[$i]->interfaceTitle}");
+                static::inetServDelete($inetServList->data->return[$i]->id, true);
+            }
+            $urlDeleteInet = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER . 
+                '&pswd=' . BGB_PASSWORD . "&module=contract&action=ContractModuleDelete&module_id=15&cid=$cid";
+            cURL::executeRequest('POST', $urlDeleteInet, false, false, false);
+            static::contractGroupRemove($cid, 18);
+            static::contractGroupRemove($cid, 30);
+            static::updateParameter(6, $cid, 41, null);
+            static::updateParameter(1, $cid, 43, null);
+            $contractTariffList = static::contractTariffList($cid);
+            for ($i=0;$i<count($contractTariffList->data->return);$i++) {
+                static::contractTariffUpdate($contractTariffList->data->return[$i]);
+                if (in_array($contractTariffList->data->return[$i]->tariffPlanId, $wCTVTariffs)) {
+                    $tariff = new stdClass();
+                    $tariff->contractId = $cid;
+                    $tariff->tariffPlanId=85;
+                    static::contractTariffUpdate($tariff);
+                    static::updateContractLimit($cid, -1000, 'Time');
+                }
+            }
+            
+        }
+        echo 'ok';
+    }
+
+    private static function getPaCl($function) {
+        $param = new stdClass();
+        switch ($function) {
+            case 'inetServList':
+                $param->package = 'ru.bitel.bgbilling.modules.inet.api/15';
+                $param->class = 'InetServService';
+                break;
+            case 'changeContractStatus':
+                $param->package = 'ru.bitel.bgbilling.kernel.contract.status';
+                $param->class = 'ContractStatusMonitorService';
+                break;
+            case 'inetServDelete':
+                $param->package = 'ru.bitel.bgbilling.modules.inet.api/15';
+                $param->class = 'InetServService';
+                break;
+            case 'contractGroupRemove':
+            case 'contractParameterGet':
+            case 'contractParameterUpdate':
+                $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
+                $param->class = 'ContractService';
+                break;
+            case 'contractTariffList':
+            case 'contractTariffUpdate':
+                $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
+                $param->class = 'ContractTariffService';
+                break;
+            case 'updateContractLimit':
+                $param->package = 'ru.bitel.bgbilling.kernel.contract.limit';
+                $param->class = 'contractLimitService';
+                break;
+
+            default:
+                break;
+        }
+        return $param;
+    }
+
+    private static function getJSON($function, $params) {
+        $param = static::getPaCl($function);
+        $param->method = $function;
+        $param->params = $params;
+        file_put_contents(date("Ymd") . '_six_inet.log', "$function" . implode(",", $params) . ".....", FILE_APPEND);
+        $json = static::execute($param);
+        file_put_contents(date("Ymd") . '_six_inet.log', $json->status . PHP_EOL, FILE_APPEND);
+        return $json;
+    }
+
+    private static function inetServList($cid) {
+        $params['contractId'] = $cid;
+        $params['orderBy'] = null;
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function changeContractStatus($cid, $statusId, $comment) {
+        $params['cid'] = array($cid);
+        $params['statusId'] = $statusId;
+        $params['dateFrom'] = date('c');
+        $params['comment'] = $comment;
+        $params['confirmChecked'] = false;
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function inetServDelete($id, $force) {
+        $params['id'] = $id;
+        $params['force'] = $force;
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function contractGroupRemove($contractId, $contractGroupId) {
+        $params['contractId'] = $contractId;
+        $params['contractGroupId'] = $contractGroupId;
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function updateContractLimit($contractId, $limit, $comment) {
+        $params['contractId'] = $contractId;
+        $params['limit'] = $limit;
+        $params['comment'] = $comment;
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function contractTariffList($contractId) {
+        $params['contractId'] = $contractId;
+        $params['date'] = date('c');
+        $params['entityMid'] = null;
+        $params['entityId'] = null;
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function contractTariffUpdate($tariff) {
+        $params['contractTariff']['id'] = $tariff->id ?? null;
+        $params['contractTariff']['contractId'] = $tariff->contractId;
+        $params['contractTariff']['tariffPlanId'] = $tariff->tariffPlanId;
+        $params['contractTariff']['dateFrom'] = (empty($tariff->dateFrom)) ? date('c') : $tariff->dateFrom;
+        $params['contractTariff']['dateTo'] = (empty($tariff->id)) ? null : date('c', strtotime("yesterday"));
+        $params['contractTariff']['comment'] = "Time";
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function contractParameterGet($contractId, $parameterId) {
+        $params['contractId'] = $contractId;
+        $params['parameterId'] = $parameterId;
+        return static::getJSON(__FUNCTION__, $params);
+    }
+
+    private static function updateParameter($type, $cid, $pid, $value) {
+        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER . 
+            '&pswd=' . BGB_PASSWORD . "&module=contract&action=UpdateParameterType$type&pid=$pid&value=$value&cid=$cid";
+        return cURL::executeRequest('POST', $url, false, false, false);
+    }
 }

