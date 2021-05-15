@@ -147,26 +147,28 @@ class BGBilling {
     }
 
     public static function sixMonthsClose() {
-        $wCTVTariffs = array(169);
-        $sql = '
-SELECT contract_status.cid FROM contract_status
-LEFT JOIN contract_module ON contract_status.cid=contract_module.cid 
-WHERE (contract_module.mid=15)AND((contract_status.date2 IS NULL)OR(contract_status.date2 >CURDATE()))AND(contract_status.status<>0)AND(DATEDIFF(CURDATE(),contract_status.date1)>180) 
-ORDER BY DATEDIFF(CURDATE(),contract_status.date1) DESC 
+        $wCTVTariffs = array(76,85,101,108,109,169);
+        $sql = "
+SELECT t_cs.cid
+FROM contract_status t_cs
+LEFT JOIN contract_module t_cm ON t_cs.cid=t_cm.cid
+LEFT JOIN contract t_c ON t_cs.cid=t_c.id
+WHERE t_cm.mid=15 AND (t_cs.date2 IS NULL OR t_cs.date2 >CURDATE()) AND t_cs.status<>0 AND NOT ((t_c.gr&(1<<27)>0) OR (t_c.gr&(1<<32)>0) OR (t_c.gr&(1<<39)>0)) AND t_cs.date1<CURRENT_DATE - INTERVAL '180' DAY
+ORDER BY DATEDIFF(CURDATE(),t_cs.date1) DESC
 LIMIT 1000
-';
+";
         $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . 
             BGB_USER . '&pswd=' . BGB_PASSWORD . 
             '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($sql);
 
         $xml = simplexml_load_string(file_get_contents($url));
-        for ($i=0;count($xml->table->data->row)>$i;$i++) {
-            $cid = (int) $xml->table->data->row[$i]->attributes()->row0;
+        for ($rowItems=0; $rowItems<count($xml->table->data->row); $rowItems++) {
+            $cid = (int) $xml->table->data->row[$rowItems]->attributes()->row0;
             file_put_contents(date("Ymd") . '_six_inet.log', PHP_EOL . "Working with cid $cid:" . PHP_EOL, FILE_APPEND);
             $inetServList = static::inetServList($cid);
-            for ($i=0; $i<count($inetServList->data->return); $i++) {
-                static::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$i]->deviceTitle} | {$inetServList->data->return[$i]->interfaceTitle}");
-                static::inetServDelete($inetServList->data->return[$i]->id, true);
+            for ($inetServItems=0; $inetServItems<count($inetServList->data->return); $inetServItems++) {
+                static::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$inetServItems]->deviceTitle} | {$inetServList->data->return[$inetServItems]->interfaceTitle}");
+                static::inetServDelete($inetServList->data->return[$inetServItems]->id, true);
             }
             $urlDeleteInet = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER . 
                 '&pswd=' . BGB_PASSWORD . "&module=contract&action=ContractModuleDelete&module_id=15&cid=$cid";
@@ -176,17 +178,17 @@ LIMIT 1000
             static::updateParameter(6, $cid, 41, null);
             static::updateParameter(1, $cid, 43, null);
             $contractTariffList = static::contractTariffList($cid);
-            for ($i=0;$i<count($contractTariffList->data->return);$i++) {
-                static::contractTariffUpdate($contractTariffList->data->return[$i]);
-                if (in_array($contractTariffList->data->return[$i]->tariffPlanId, $wCTVTariffs)) {
+            for ($contractTariffItems=0; $contractTariffItems<count($contractTariffList->data->return); $contractTariffItems++) {
+                static::contractTariffUpdate($contractTariffList->data->return[$contractTariffItems]);
+                if (in_array($contractTariffList->data->return[$contractTariffItems]->tariffPlanId, $wCTVTariffs)) {
                     $tariff = new stdClass();
                     $tariff->contractId = $cid;
                     $tariff->tariffPlanId=85;
                     static::contractTariffUpdate($tariff);
                     static::updateContractLimit($cid, -1000, 'Time');
+                    static::changeContractStatus($cid, 0, "Time | {$inetServList->data->return[$contractTariffItems]->deviceTitle} | {$inetServList->data->return[$contractTariffItems]->interfaceTitle}");
                 }
             }
-            
         }
         echo 'ok';
     }
@@ -219,7 +221,7 @@ LIMIT 1000
                 break;
             case 'updateContractLimit':
                 $param->package = 'ru.bitel.bgbilling.kernel.contract.limit';
-                $param->class = 'contractLimitService';
+                $param->class = 'ContractLimitService';
                 break;
 
             default:
@@ -232,9 +234,12 @@ LIMIT 1000
         $param = static::getPaCl($function);
         $param->method = $function;
         $param->params = $params;
-        file_put_contents(date("Ymd") . '_six_inet.log', "$function" . implode(",", $params) . ".....", FILE_APPEND);
+        file_put_contents(date("Ymd") . '_six_inet.log', "$function (" . 
+            serialize($params) . ").....", FILE_APPEND);
+#        file_put_contents(date("Ymd") . '_six_inet.log', "$function.....", FILE_APPEND);
         $json = static::execute($param);
-        file_put_contents(date("Ymd") . '_six_inet.log', $json->status . PHP_EOL, FILE_APPEND);
+        file_put_contents(date("Ymd") . '_six_inet.log', $json->status . 
+            PHP_EOL, FILE_APPEND);
         return $json;
     }
 
@@ -298,7 +303,8 @@ LIMIT 1000
 
     private static function updateParameter($type, $cid, $pid, $value) {
         $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER . 
-            '&pswd=' . BGB_PASSWORD . "&module=contract&action=UpdateParameterType$type&pid=$pid&value=$value&cid=$cid";
+            '&pswd=' . BGB_PASSWORD . 
+            "&module=contract&action=UpdateParameterType$type&pid=$pid&value=$value&cid=$cid";
         return cURL::executeRequest('POST', $url, false, false, false);
     }
 }
