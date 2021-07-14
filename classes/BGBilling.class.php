@@ -84,7 +84,16 @@ class BGBilling {
         return $json->data->return->title;
     }
 
-    private static function getContractParameter($cid, $paramId) {
+    public static function getContract($cid) {
+        $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
+        $param->class = 'ContractService';
+        $param->method = 'contractGet';
+        $param->params['contractId'] = $cid;
+        $json = static::execute($param);
+        return $json->data->return;
+    }
+
+    public static function getContractParameter($cid, $paramId) {
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
         $param->class = 'ContractService';
         $param->method = 'contractParameterGet';
@@ -94,7 +103,7 @@ class BGBilling {
         return $json->data->return;
     }
 
-    private static function getCurrentBalance($cid) {
+    public static function getCurrentBalance($cid) {
         $param->package = 'ru.bitel.bgbilling.kernel.contract.balance';
         $param->class = 'BalanceService';
         $param->method = 'contractBalanceGet';
@@ -106,7 +115,7 @@ class BGBilling {
         return $balance;
     }
 
-    private static function getContractTariff($cid) {
+    public static function getContractTariff($cid) {
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
         $param->class = 'ContractTariffService';
         $param->method = 'contractTariffEntryList';
@@ -133,17 +142,28 @@ class BGBilling {
         return $last_pay->date . " | " . $last_pay->sum . ' руб.';
     }
 
-    public static function getBalanceYandex($requestJson){
-        preg_match ('/([A,B]\d{4,5})|(\d{1,5})$/', preg_replace('/\D/', '', $requestJson->request->command), $matches);
-        $balance = (empty($matches[2])) ? null : static::getCurrentBalance($matches[2]);
-        $balanceText = (empty($balance)) ? 'Для получения баланса отправьте лицевой счет из десяти цифр, указанный в договоре. Также можно отправить часть кода, идущую после нулей.' : "Ваш баланс в рублях: $balance";
-        $response['response']['text'] = $balanceText;
-        $response['response']['end_session'] = (empty($balance)) ? false : true;
-//        $response['response']['end_session'] = true;
-        $response['version'] = '1.0';
-        $response['session'] = $requestJson->session;
+    private static function getTariffCost($tariff) {
+        switch ($tariff) {
+            case '2018 Активный (25М/300Р) - Архив 2018':
+                $cost = 250;
+                break;
+            case '2018 GePON 100 (100М+ТВ/650Р)':
+                $cost = 650;
+                break;
+            case '2018 GePON 100 (100М/550Р)':
+                $cost = 550;
+                break;
 
-        return json_encode($response);
+            default:
+                $cost = 300;
+                break;
+        }
+        return $cost;
+    }
+
+    public static function getCountDays($tariff, $balance) {
+        $cost = static::getTariffCost($tariff);
+        return floor($balance/($cost/intval(date("t")))-1);
     }
 
     public static function sixMonthsClose() {

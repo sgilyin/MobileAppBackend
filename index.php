@@ -23,6 +23,19 @@ spl_autoload_register(function ($class) {
     include 'classes/' . $class . '.class.php';
 });
 
+switch (filter_input(INPUT_SERVER, 'REQUEST_METHOD')) {
+    case 'POST':
+        $requestData = filter_input_array(INPUT_POST);
+        break;
+
+    case 'GET':
+        $requestData = filter_input_array(INPUT_GET);
+        break;
+
+    default:
+        break;
+}
+
 switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
     case 'application/json;charset=utf-8':
     case 'application/json':
@@ -31,12 +44,26 @@ switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
         $requestJson = json_decode(file_get_contents("php://input"));
         header("Content-type: application/json; charset=utf-8");
         if (isset($requestJson->session->skill_id)) {
-            echo BGBilling::getBalanceYandex($requestJson);
+            echo Yandex::getBalance($requestJson);
         } else {
             echo BGBilling::getContractInformation($requestJson);
         }
 //        file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
         break;
+
+    case 'application/x-www-form-urlencoded':
+        file_put_contents('request.log', serialize($requestData));
+        if ($requestData['event'] == 'ONIMBOTJOINCHAT') {
+ #           BX24::sendMessageOpenLine($requestData['data']['PARAMS']['CHAT_ID'], 'WELCOME', 'WELCOME');
+        }
+
+        if ($requestData['event'] == 'ONIMBOTMESSAGEADD') {
+#            BX24::sendMessageOpenLine($requestData['data']['PARAMS']['CHAT_ID'], 'Пожалуйста, подождите');
+        }
+
+        if ($requestData['data']['USER']['IS_EXTRANET'] == 'Y') {
+            BX24::sendMessageOpenLine($requestData['data']['PARAMS']['CHAT_ID'], 'Чат-бот: ждите ответа...');
+        }
 
     default:
         if (filter_input(INPUT_SERVER, 'HTTP_USER_AGENT')=='curl/7.64.0' && filter_input(INPUT_SERVER, 'REMOTE_ADDR')=='195.191.78.20') {
