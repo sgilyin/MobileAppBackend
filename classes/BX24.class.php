@@ -41,4 +41,12 @@ class BX24 {
         return static::callMethod('imopenlines.bot.session.message.send', $bx24Data);
     }
 
+    public static function finishSessionOpenLine($chatId) {
+        $bx24Data = http_build_query(
+                array(
+                    'CHAT_ID' => $chatId,
+                    )
+                );
+        return static::callMethod('imopenlines.bot.session.finish', $bx24Data);
+    }
 }

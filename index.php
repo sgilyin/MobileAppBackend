@@ -48,22 +48,10 @@ switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
         } else {
             echo BGBilling::getContractInformation($requestJson);
         }
-//        file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
         break;
-
     case 'application/x-www-form-urlencoded':
-        file_put_contents('request.log', serialize($requestData));
-        if ($requestData['event'] == 'ONIMBOTJOINCHAT') {
- #           BX24::sendMessageOpenLine($requestData['data']['PARAMS']['CHAT_ID'], 'WELCOME', 'WELCOME');
-        }
-
-        if ($requestData['event'] == 'ONIMBOTMESSAGEADD') {
-#            BX24::sendMessageOpenLine($requestData['data']['PARAMS']['CHAT_ID'], 'Пожалуйста, подождите');
-        }
-
-        if ($requestData['data']['USER']['IS_EXTRANET'] == 'Y') {
-            BX24::sendMessageOpenLine($requestData['data']['PARAMS']['CHAT_ID'], 'Чат-бот: ждите ответа...');
-        }
+        botOLBX24::handler($requestData);
+#        file_put_contents('request.log', serialize($requestData));
 
     default:
         if (filter_input(INPUT_SERVER, 'HTTP_USER_AGENT')=='curl/7.64.0' && filter_input(INPUT_SERVER, 'REMOTE_ADDR')=='195.191.78.20') {

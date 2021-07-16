@@ -58,6 +58,7 @@ class BGBilling {
         return $json;
     }
     private static function checkAccess($contract, $password) {
+        $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
         $param->class = 'ContractService';
         $param->method = 'contractList';
@@ -76,6 +77,7 @@ class BGBilling {
     }
 
     private static function getContractTitle($cid) {
+        $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
         $param->class = 'ContractService';
         $param->method = 'contractGet';
@@ -85,6 +87,7 @@ class BGBilling {
     }
 
     public static function getContract($cid) {
+        $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
         $param->class = 'ContractService';
         $param->method = 'contractGet';
@@ -94,6 +97,7 @@ class BGBilling {
     }
 
     public static function getContractParameter($cid, $paramId) {
+        $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
         $param->class = 'ContractService';
         $param->method = 'contractParameterGet';
@@ -104,6 +108,7 @@ class BGBilling {
     }
 
     public static function getCurrentBalance($cid) {
+        $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.balance';
         $param->class = 'BalanceService';
         $param->method = 'contractBalanceGet';
@@ -116,6 +121,7 @@ class BGBilling {
     }
 
     public static function getContractTariff($cid) {
+        $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
         $param->class = 'ContractTariffService';
         $param->method = 'contractTariffEntryList';
@@ -132,6 +138,7 @@ class BGBilling {
     }
 
     private static function getLastPay($cid) {
+        $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.balance';
         $param->class = 'PaymentService';
         $param->method = 'paymentList';
@@ -326,5 +333,34 @@ LIMIT 1000
             '&pswd=' . BGB_PASSWORD . 
             "&module=contract&action=UpdateParameterType$type&pid=$pid&value=$value&cid=$cid";
         return cURL::executeRequest('POST', $url, false, false, false);
+    }
+
+    public static function getContractPayCode($matchesPayCode) {
+        $sql = "
+SELECT 1000000000+tbl_contract.id AS paycode, CONCAT('ул. ', tbl_street.title, ' д. ', tbl_house.house, CONCAT_WS( ' кв. ',tbl_house.frac, IF(tbl_flat.flat='',NULL,tbl_flat.flat))) AS 'address'
+FROM contract tbl_contract
+LEFT JOIN contract_parameter_type_2 tbl_flat ON tbl_contract.id=tbl_flat.cid
+LEFT JOIN address_house tbl_house ON tbl_flat.hid=tbl_house.id
+LEFT JOIN address_street tbl_street ON tbl_house.streetid=tbl_street.id
+WHERE tbl_contract.date2 IS NULL AND tbl_street.title='{$matchesPayCode['street']}' AND tbl_house.house={$matchesPayCode['house']}
+";
+        if ($matchesPayCode['frac']) {
+            $sql .= " AND tbl_house.frac LIKE '%{$matchesPayCode['frac']}'";
+        }
+        if ($matchesPayCode['flat']) {
+            $sql .= " AND tbl_flat.flat='{$matchesPayCode['flat']}'";
+        }
+        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . 
+            BGB_USER . '&pswd=' . BGB_PASSWORD . 
+            '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($sql);
+        $xml = simplexml_load_string(file_get_contents($url));
+        if ($xml->table->data->row[0]) {
+            $paycode = $xml->table->data->row[0]->attributes()->row0;
+            $address = $xml->table->data->row[0]->attributes()->row1;
+            $result = "Код для оплаты (лицевой счет) по адресу $address - $paycode";
+        } else {
+            $result .= "Код для оплаты (лицевой счет) не найден. Ждите ответа оператора.";
+        }
+        return $result;
     }
 }
