@@ -342,7 +342,7 @@ FROM contract tbl_contract
 LEFT JOIN contract_parameter_type_2 tbl_flat ON tbl_contract.id=tbl_flat.cid
 LEFT JOIN address_house tbl_house ON tbl_flat.hid=tbl_house.id
 LEFT JOIN address_street tbl_street ON tbl_house.streetid=tbl_street.id
-WHERE tbl_contract.date2 IS NULL AND tbl_street.title='{$matchesPayCode['street']}' AND tbl_house.house={$matchesPayCode['house']}
+WHERE tbl_contract.date2 IS NULL AND tbl_contract.fc=0 AND tbl_street.title='{$matchesPayCode['street']}' AND tbl_house.house={$matchesPayCode['house']}
 ";
         if ($matchesPayCode['frac']) {
             $sql .= " AND tbl_house.frac LIKE '%{$matchesPayCode['frac']}'";

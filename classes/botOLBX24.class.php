@@ -219,13 +219,13 @@ E-mail: mail@fialka.tv
             #$botCheck[] = ['', '//'];
             $botCheck[] = ['fuck', '/бля|сука|хуй|хуя|ебу|ебал|ебан|пидор/'];
             $botCheck[] = ['routerSetup', '/настр.*роутер|настр.*[wW]i[fF]i/'];
-            $botCheck[] = ['speedTest', '/корост|пидтест|peedtest/'];
+            $botCheck[] = ['speedTest', '/корост|пидтест|peedtest|едлен/'];
             $botCheck[] = ['visitCash', '/одключить|тключить|менить|оменять/'];
             $botCheck[] = ['address', '/дрес|аходитесь|ахожден|де.*асса/'];
             $botCheck[] = ['phone', '/елефон|звон|связ/'];
             $botCheck[] = ['schedule', '/рафик/'];
             $botCheck[] = ['tariff', '/ариф/'];
-            $botCheck[] = ['faultTV', '/телеви|ТВ|налог|абельн|ифров|омехи/'];
+            $botCheck[] = ['faultTV', '/телеви|ТВ|налог|абельн|ифров|омехи|анал/'];
             for ($index = 0; $index < count($botCheck); $index++) {
                 preg_match($botCheck[$index][1], $inMessage, $matches);
                 if ($matches) {
