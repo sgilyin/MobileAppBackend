@@ -204,7 +204,7 @@ E-mail: mail@fialka.tv
             }
             #BALANCE END
             #PAY CODE START
-            preg_match('/(од для.*оплат|ицевой счет)([ ](?<street>\d{0,2}[ ]?\D+)[ ](?<house>\d+)[ ]?(?<frac>\D)?[ ]?(?<flat>\d+)?)?/u', $inMessage, $matchesPayCode);
+            preg_match('/(од для.*оплат|ицевой сч.т)([ ](?<street>\d{0,2}[ ]?\D+)[ ](?<house>\d+)[ ]?(?<frac>\D)?[ ]?(?<flat>\d+)?)?/u', $inMessage, $matchesPayCode);
             if ($matchesPayCode) {
                 if ($matchesPayCode['street']) {
                     $paycode = BGBilling::getContractPayCode($matchesPayCode);
