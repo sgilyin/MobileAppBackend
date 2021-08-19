@@ -191,7 +191,7 @@ LIMIT 1000
         $xml = simplexml_load_string(file_get_contents($url));
         for ($rowItems=0; $rowItems<count($xml->table->data->row); $rowItems++) {
             $cid = (int) $xml->table->data->row[$rowItems]->attributes()->row0;
-            file_put_contents(date("Ymd") . '_six_inet.log', PHP_EOL . "Working with cid $cid:" . PHP_EOL, FILE_APPEND);
+            file_put_contents(date("Ymd") . "_{$args['days']}_inet.log", PHP_EOL . "Working with cid $cid:" . PHP_EOL, FILE_APPEND);
             $inetServList = static::inetServList($cid);
             for ($inetServItems=0; $inetServItems<count($inetServList->data->return); $inetServItems++) {
                 static::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$inetServItems]->deviceTitle} | {$inetServList->data->return[$inetServItems]->interfaceTitle}");
