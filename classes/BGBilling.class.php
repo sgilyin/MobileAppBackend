@@ -173,14 +173,14 @@ class BGBilling {
         return floor($balance/($cost/intval(date("t")))-1);
     }
 
-    public static function sixMonthsClose() {
+    public static function removeInet($args) {
         $wCTVTariffs = array(76,85,101,108,109,169);
         $sql = "
 SELECT t_cs.cid
 FROM contract_status t_cs
 LEFT JOIN contract_module t_cm ON t_cs.cid=t_cm.cid
 LEFT JOIN contract t_c ON t_cs.cid=t_c.id
-WHERE t_cm.mid=15 AND (t_cs.date2 IS NULL OR t_cs.date2 >CURDATE()) AND t_cs.status<>0 AND NOT ((t_c.gr&(1<<27)>0) OR (t_c.gr&(1<<32)>0) OR (t_c.gr&(1<<39)>0)) AND t_cs.date1<CURRENT_DATE - INTERVAL '180' DAY
+WHERE t_cm.mid=15 AND (t_cs.date2 IS NULL OR t_cs.date2 >CURDATE()) AND t_cs.status<>0 AND NOT ((t_c.gr&(1<<27)>0) OR (t_c.gr&(1<<32)>0) OR (t_c.gr&(1<<39)>0)) AND t_cs.date1<CURRENT_DATE - INTERVAL '{$args['days']}' DAY
 ORDER BY DATEDIFF(CURDATE(),t_cs.date1) DESC
 LIMIT 1000
 ";
