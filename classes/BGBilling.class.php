@@ -23,21 +23,33 @@
  * @author Sergey Ilyin <developer@ilyins.ru>
  */
 class BGBilling {
-    public static function getContractInformation($requestJson){
-        preg_match ('/^([A,B]\d{5})|(\d{5})$/', $requestJson->contract, $matches);
-        $contractTitle = (empty($matches[1])) ? static::getContractTitle($matches[2]) : $matches[1];
-        if ($contract = static::checkAccess($contractTitle, $requestJson->password)){
+
+    public static function getContractsInfo($requestJson) {
+        $contracts = array();
+        for ($index = 0; $index < count($requestJson->contracts); $index++) {
+            $contracts[] = self::getContractInfo($requestJson->contracts[$index]);
+        }
+        $response['contracts'] = $contracts;
+        return json_encode($response);
+    }
+
+    private function getContractInfo($requestJson) {
+        preg_match('/^([A,B]\d{5})|(\d{5})$/', $requestJson->contract, $matches);
+        $contractTitle = (empty($matches[1])) ? self::getContractTitle($matches[2]) : $matches[1];
+        $patterns = array('/\d{6}/', '/ г. Кумертау/', '/ \d* под./', '/ \d* эт./', '/,/');
+        $replacements = '';
+        if ($contract = self::checkAccess($contractTitle, $requestJson->password)) {
             $responseSuccess = true;
             $responseMessage = '';
             $responseData['id'] = $contract->id;
             $responseData['pay_code'] = 1000000000 + $contract->id;
             $responseData['title'] = $contract->title;
             $responseData['status'] = ($contract->status == 0) ? 'Активен' : 'Не активен';
-            $responseData['subscriber'] = static::getContractParameter($contract->id, 1)->value;
-            $responseData['address'] = static::getContractParameter($contract->id, 12)->title;
-            $responseData['balance'] = static::getCurrentBalance($contract->id);
-            $responseData['tariff'] = static::getContractTariff($contract->id);
-            $responseData['last_pay'] = static::getLastPay($contract->id);
+            $responseData['subscriber'] = self::getContractParameter($contract->id, 1)->value;
+            $responseData['address'] = preg_replace($patterns, $replacements, self::getContractParameter($contract->id, 12)->title);
+            $responseData['balance'] = self::getCurrentBalance($contract->id);
+            $responseData['tariff'] = self::getContractTariff($contract->id);
+            $responseData['last_pay'] = self::getLastPay($contract->id);
         } else {
             $responseSuccess = false;
             $responseMessage = 'Wrong contract number or password';
@@ -45,7 +57,7 @@ class BGBilling {
         $response['success'] = $responseSuccess;
         $response['message'] = $responseMessage;
         $response['data'] = $responseData ?? false;
-        return json_encode($response);
+        return $response;
     }
 
     private static function execute($param) {
@@ -57,6 +69,7 @@ class BGBilling {
         $json = json_decode(cURL::executeRequest('POST', $url, false, false, json_encode($post)));
         return $json;
     }
+
     private static function checkAccess($contract, $password) {
         $param = new stdClass();
         $param->package = 'ru.bitel.bgbilling.kernel.contract.api';
@@ -68,8 +81,8 @@ class BGBilling {
         $param->params['subContracts'] = false;
         $param->params['closed'] = true;
         $param->params['hidden'] = false;
-        $json = static::execute($param);
-        if ($json->status == 'ok' && $json->data->page->recordCount == 1 && $json->data->return[0]->password == $password){
+        $json = self::execute($param);
+        if ($json->status == 'ok' && $json->data->page->recordCount == 1 && $json->data->return[0]->password == $password) {
             return $json->data->return[0];
         } else {
             return false;
@@ -82,7 +95,7 @@ class BGBilling {
         $param->class = 'ContractService';
         $param->method = 'contractGet';
         $param->params['contractId'] = $cid;
-        $json = static::execute($param);
+        $json = self::execute($param);
         return $json->data->return->title;
     }
 
@@ -92,7 +105,7 @@ class BGBilling {
         $param->class = 'ContractService';
         $param->method = 'contractGet';
         $param->params['contractId'] = $cid;
-        $json = static::execute($param);
+        $json = self::execute($param);
         return $json->data->return;
     }
 
@@ -103,7 +116,7 @@ class BGBilling {
         $param->method = 'contractParameterGet';
         $param->params['contractId'] = $cid;
         $param->params['parameterId'] = $paramId;
-        $json = static::execute($param);
+        $json = self::execute($param);
         return $json->data->return;
     }
 
@@ -115,7 +128,7 @@ class BGBilling {
         $param->params['contractId'] = $cid;
         $param->params['year'] = date('Y');
         $param->params['month'] = date('n');
-        $json = static::execute($param);
+        $json = self::execute($param);
         $balance = round($json->data->return->incomingSaldo + $json->data->return->payments - $json->data->return->accounts - $json->data->return->charges, 2);
         return $balance;
     }
@@ -129,9 +142,9 @@ class BGBilling {
         $param->params['date'] = date('Y-m-d');
         $param->params['entityMid'] = -1;
         $param->params['entityId'] = -1;
-        $json = static::execute($param);
+        $json = self::execute($param);
         $tariff = array();
-        for ($i=0; $i<count($json->data->return); $i++) {
+        for ($i = 0; $i < count($json->data->return); $i++) {
             array_push($tariff, $json->data->return[$i]->title);
         }
         return implode(", ", $tariff);
@@ -144,7 +157,7 @@ class BGBilling {
         $param->method = 'paymentList';
         $param->params['contractId'] = $cid;
         $param->params['members'] = 1;
-        $json = static::execute($param);
+        $json = self::execute($param);
         $last_pay = end($json->data->return);
         return $last_pay->date . " | " . $last_pay->sum . ' руб.';
     }
@@ -169,12 +182,12 @@ class BGBilling {
     }
 
     public static function getCountDays($tariff, $balance) {
-        $cost = static::getTariffCost($tariff);
-        return floor($balance/($cost/intval(date("t")))-1);
+        $cost = self::getTariffCost($tariff);
+        return floor($balance / ($cost / intval(date("t"))) - 1);
     }
 
     public static function removeInet($args) {
-        $wCTVTariffs = array(76,85,101,108,109,169);
+        $wCTVTariffs = array(76, 85, 101, 108, 109, 169);
         $sql = "
 SELECT t_cs.cid
 FROM contract_status t_cs
@@ -184,36 +197,36 @@ WHERE t_cm.mid=15 AND (t_cs.date2 IS NULL OR t_cs.date2 >CURDATE()) AND t_cs.sta
 ORDER BY DATEDIFF(CURDATE(),t_cs.date1) DESC
 LIMIT 1000
 ";
-        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . 
-            BGB_USER . '&pswd=' . BGB_PASSWORD . 
-            '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($sql);
+        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' .
+                BGB_USER . '&pswd=' . BGB_PASSWORD .
+                '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($sql);
 
         $xml = simplexml_load_string(file_get_contents($url));
-        for ($rowItems=0; $rowItems<count($xml->table->data->row); $rowItems++) {
+        for ($rowItems = 0; $rowItems < count($xml->table->data->row); $rowItems++) {
             $cid = (int) $xml->table->data->row[$rowItems]->attributes()->row0;
             file_put_contents(date("Ymd") . "_{$args['days']}_inet.log", PHP_EOL . "Working with cid $cid:" . PHP_EOL, FILE_APPEND);
-            $inetServList = static::inetServList($cid);
-            for ($inetServItems=0; $inetServItems<count($inetServList->data->return); $inetServItems++) {
-                static::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$inetServItems]->deviceTitle} | {$inetServList->data->return[$inetServItems]->interfaceTitle}");
-                static::inetServDelete($inetServList->data->return[$inetServItems]->id, true);
+            $inetServList = self::inetServList($cid);
+            for ($inetServItems = 0; $inetServItems < count($inetServList->data->return); $inetServItems++) {
+                self::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$inetServItems]->deviceTitle} | {$inetServList->data->return[$inetServItems]->interfaceTitle}");
+                self::inetServDelete($inetServList->data->return[$inetServItems]->id, true);
             }
-            $urlDeleteInet = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER . 
-                '&pswd=' . BGB_PASSWORD . "&module=contract&action=ContractModuleDelete&module_id=15&cid=$cid";
+            $urlDeleteInet = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER .
+                    '&pswd=' . BGB_PASSWORD . "&module=contract&action=ContractModuleDelete&module_id=15&cid=$cid";
             cURL::executeRequest('POST', $urlDeleteInet, false, false, false);
-            static::contractGroupRemove($cid, 18);
-            static::contractGroupRemove($cid, 30);
-            static::updateParameter(6, $cid, 41, null);
-            static::updateParameter(1, $cid, 43, null);
-            $contractTariffList = static::contractTariffList($cid);
-            for ($contractTariffItems=0; $contractTariffItems<count($contractTariffList->data->return); $contractTariffItems++) {
-                static::contractTariffUpdate($contractTariffList->data->return[$contractTariffItems]);
+            self::contractGroupRemove($cid, 18);
+            self::contractGroupRemove($cid, 30);
+            self::updateParameter(6, $cid, 41, null);
+            self::updateParameter(1, $cid, 43, null);
+            $contractTariffList = self::contractTariffList($cid);
+            for ($contractTariffItems = 0; $contractTariffItems < count($contractTariffList->data->return); $contractTariffItems++) {
+                self::contractTariffUpdate($contractTariffList->data->return[$contractTariffItems]);
                 if (in_array($contractTariffList->data->return[$contractTariffItems]->tariffPlanId, $wCTVTariffs)) {
                     $tariff = new stdClass();
                     $tariff->contractId = $cid;
-                    $tariff->tariffPlanId=85;
-                    static::contractTariffUpdate($tariff);
-                    static::updateContractLimit($cid, -1000, 'Time');
-                    static::changeContractStatus($cid, 0, "Time | {$inetServList->data->return[$contractTariffItems]->deviceTitle} | {$inetServList->data->return[$contractTariffItems]->interfaceTitle}");
+                    $tariff->tariffPlanId = 85;
+                    self::contractTariffUpdate($tariff);
+                    self::updateContractLimit($cid, -1000, 'Time');
+                    self::changeContractStatus($cid, 0, "Time | {$inetServList->data->return[$contractTariffItems]->deviceTitle} | {$inetServList->data->return[$contractTariffItems]->interfaceTitle}");
                 }
             }
         }
@@ -258,15 +271,15 @@ LIMIT 1000
     }
 
     private static function getJSON($function, $params) {
-        $param = static::getPaCl($function);
+        $param = self::getPaCl($function);
         $param->method = $function;
         $param->params = $params;
-        file_put_contents(date("Ymd") . '_six_inet.log', "$function (" . 
-            serialize($params) . ").....", FILE_APPEND);
+        file_put_contents(date("Ymd") . '_six_inet.log', "$function (" .
+                serialize($params) . ").....", FILE_APPEND);
 #        file_put_contents(date("Ymd") . '_six_inet.log', "$function.....", FILE_APPEND);
-        $json = static::execute($param);
-        file_put_contents(date("Ymd") . '_six_inet.log', $json->status . 
-            PHP_EOL, FILE_APPEND);
+        $json = self::execute($param);
+        file_put_contents(date("Ymd") . '_six_inet.log', $json->status .
+                PHP_EOL, FILE_APPEND);
         return $json;
     }
 
@@ -282,26 +295,26 @@ LIMIT 1000
         $params['dateFrom'] = date('c');
         $params['comment'] = $comment;
         $params['confirmChecked'] = false;
-        return static::getJSON(__FUNCTION__, $params);
+        return self::getJSON(__FUNCTION__, $params);
     }
 
     private static function inetServDelete($id, $force) {
         $params['id'] = $id;
         $params['force'] = $force;
-        return static::getJSON(__FUNCTION__, $params);
+        return self::getJSON(__FUNCTION__, $params);
     }
 
     private static function contractGroupRemove($contractId, $contractGroupId) {
         $params['contractId'] = $contractId;
         $params['contractGroupId'] = $contractGroupId;
-        return static::getJSON(__FUNCTION__, $params);
+        return self::getJSON(__FUNCTION__, $params);
     }
 
     private static function updateContractLimit($contractId, $limit, $comment) {
         $params['contractId'] = $contractId;
         $params['limit'] = $limit;
         $params['comment'] = $comment;
-        return static::getJSON(__FUNCTION__, $params);
+        return self::getJSON(__FUNCTION__, $params);
     }
 
     private static function contractTariffList($contractId) {
@@ -309,7 +322,7 @@ LIMIT 1000
         $params['date'] = date('c');
         $params['entityMid'] = null;
         $params['entityId'] = null;
-        return static::getJSON(__FUNCTION__, $params);
+        return self::getJSON(__FUNCTION__, $params);
     }
 
     private static function contractTariffUpdate($tariff) {
@@ -319,19 +332,19 @@ LIMIT 1000
         $params['contractTariff']['dateFrom'] = (empty($tariff->dateFrom)) ? date('c') : $tariff->dateFrom;
         $params['contractTariff']['dateTo'] = (empty($tariff->id)) ? null : date('c', strtotime("yesterday"));
         $params['contractTariff']['comment'] = "Time";
-        return static::getJSON(__FUNCTION__, $params);
+        return self::getJSON(__FUNCTION__, $params);
     }
 
     private static function contractParameterGet($contractId, $parameterId) {
         $params['contractId'] = $contractId;
         $params['parameterId'] = $parameterId;
-        return static::getJSON(__FUNCTION__, $params);
+        return self::getJSON(__FUNCTION__, $params);
     }
 
     private static function updateParameter($type, $cid, $pid, $value) {
-        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER . 
-            '&pswd=' . BGB_PASSWORD . 
-            "&module=contract&action=UpdateParameterType$type&pid=$pid&value=$value&cid=$cid";
+        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER .
+                '&pswd=' . BGB_PASSWORD .
+                "&module=contract&action=UpdateParameterType$type&pid=$pid&value=$value&cid=$cid";
         return cURL::executeRequest('POST', $url, false, false, false);
     }
 
@@ -350,9 +363,9 @@ WHERE tbl_contract.date2 IS NULL AND tbl_contract.fc=0 AND tbl_street.title='{$m
         if ($matchesPayCode['flat']) {
             $sql .= " AND tbl_flat.flat='{$matchesPayCode['flat']}'";
         }
-        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . 
-            BGB_USER . '&pswd=' . BGB_PASSWORD . 
-            '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($sql);
+        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' .
+                BGB_USER . '&pswd=' . BGB_PASSWORD .
+                '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($sql);
         $xml = simplexml_load_string(file_get_contents($url));
         if ($xml->table->data->row[0]) {
             $paycode = $xml->table->data->row[0]->attributes()->row0;
@@ -363,4 +376,5 @@ WHERE tbl_contract.date2 IS NULL AND tbl_contract.fc=0 AND tbl_street.title='{$m
         }
         return $result;
     }
+
 }

@@ -46,7 +46,7 @@ switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
         if (isset($requestJson->session->skill_id)) {
             echo Yandex::getBalance($requestJson);
         } else {
-            echo BGBilling::getContractInformation($requestJson);
+            echo BGBilling::getContractsInfo($requestJson);
         }
         break;
     case 'application/x-www-form-urlencoded':
