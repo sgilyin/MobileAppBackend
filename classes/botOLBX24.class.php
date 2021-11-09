@@ -217,7 +217,7 @@ E-mail: mail@fialka.tv
             #BOT ANSWER START
             $botCheck = array();
             #$botCheck[] = ['', '//'];
-            $botCheck[] = ['fuck', '/бля|сука|хуй|хуя|ебу|ебал|ебан|пидор/'];
+            $botCheck[] = ['fuck', '/\bбля|сука|хуй|хуя|ебу|ебал|ебан|пидор/u'];
             $botCheck[] = ['routerSetup', '/настр.*роутер|настр.*[wW]i[fF]i/'];
             $botCheck[] = ['speedTest', '/корост|пидтест|peedtest|едлен/'];
             $botCheck[] = ['visitCash', '/одключить|тключить|менить|оменять/'];
