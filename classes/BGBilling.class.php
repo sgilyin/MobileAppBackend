@@ -204,7 +204,7 @@ LIMIT 1000
         $xml = simplexml_load_string(file_get_contents($url));
         for ($rowItems = 0; $rowItems < count($xml->table->data->row); $rowItems++) {
             $cid = (int) $xml->table->data->row[$rowItems]->attributes()->row0;
-            file_put_contents(date("Ymd") . "_{$args['days']}_inet.log", PHP_EOL . "Working with cid $cid:" . PHP_EOL, FILE_APPEND);
+            file_put_contents(date("Ymd") . '.log', PHP_EOL . "Working with cid $cid ({$args['days']} days):" . PHP_EOL, FILE_APPEND);
             $inetServList = self::inetServList($cid);
             for ($inetServItems = 0; $inetServItems < count($inetServList->data->return); $inetServItems++) {
                 self::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$inetServItems]->deviceTitle} | {$inetServList->data->return[$inetServItems]->interfaceTitle}");
@@ -274,11 +274,11 @@ LIMIT 1000
         $param = self::getPaCl($function);
         $param->method = $function;
         $param->params = $params;
-        file_put_contents(date("Ymd") . '_six_inet.log', "$function (" .
+        file_put_contents(date("Ymd") . '.log', "$function (" .
                 serialize($params) . ").....", FILE_APPEND);
-#        file_put_contents(date("Ymd") . '_six_inet.log', "$function.....", FILE_APPEND);
+#        file_put_contents(date("Ymd") . '.log', "$function.....", FILE_APPEND);
         $json = self::execute($param);
-        file_put_contents(date("Ymd") . '_six_inet.log', $json->status .
+        file_put_contents(date("Ymd") . '.log', $json->status .
                 PHP_EOL, FILE_APPEND);
         return $json;
     }
