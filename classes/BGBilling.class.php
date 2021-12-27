@@ -350,7 +350,7 @@ LIMIT 1000
 
     public static function getContractPayCode($matchesPayCode) {
         $sql = "
-SELECT 1000000000+tbl_contract.id AS paycode, CONCAT('ул. ', tbl_street.title, ' д. ', tbl_house.house, CONCAT_WS( ' кв. ',tbl_house.frac, IF(tbl_flat.flat='',NULL,tbl_flat.flat))) AS 'address'
+SELECT 1000000000+tbl_contract.id AS paycode, CONCAT(tbl_street.title, ' д. ', tbl_house.house, CONCAT_WS( ' кв. ',tbl_house.frac, IF(tbl_flat.flat='',NULL,tbl_flat.flat))) AS 'address'
 FROM contract tbl_contract
 LEFT JOIN contract_parameter_type_2 tbl_flat ON tbl_contract.id=tbl_flat.cid
 LEFT JOIN address_house tbl_house ON tbl_flat.hid=tbl_house.id
@@ -370,7 +370,7 @@ WHERE tbl_contract.date2 IS NULL AND tbl_contract.fc=0 AND tbl_street.title='{$m
         if ($xml->table->data->row[0]) {
             $paycode = $xml->table->data->row[0]->attributes()->row0;
             $address = $xml->table->data->row[0]->attributes()->row1;
-            $result = "Код для оплаты (лицевой счет) по адресу $address - $paycode";
+            $result = "Код для оплаты (лицевой счет) по адресу: $address - $paycode";
         } else {
             $result .= "Код для оплаты (лицевой счет) не найден. Ждите ответа оператора.";
         }
