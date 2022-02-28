@@ -161,12 +161,20 @@ E-mail: mail@fialka.tv
                 break;
             case '3':
                 $responseText = "$contractBalanceText. Этого не достаточно для работы интернета.";
-                $tariffs300 = array (
-                    '2018 СуперХит (100М+ТВ/300Р)',
-                    '2018 Отличный (100М/300Р)'
+                $tariffs330 = array (
+                    '2018 СуперХит (100М+ТВ/330Р) - Архив 2022',
+                    '2018 Отличный (100М/330Р) - Архив 2022'
                     );
-                if (in_array($contractTariff, $tariffs300)) {
-                    $minPay = ceil(300 - $contractBalance);
+                $tariffs350 = array (
+                    '22.03 Отличный (100М/350Р)',
+                    '22.03 СуперХит (100М+ТВ/350Р)'
+                    );
+                if (in_array($contractTariff, $tariffs330)) {
+                    $minPay = ceil(330 - $contractBalance);
+                    $responseText .= " Нужно доплатить минимум $minPay руб.";
+                }
+                if (in_array($contractTariff, $tariffs350)) {
+                    $minPay = ceil(350 - $contractBalance);
                     $responseText .= " Нужно доплатить минимум $minPay руб.";
                 }
                 break;

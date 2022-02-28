@@ -164,8 +164,10 @@ class BGBilling {
 
     private static function getTariffCost($tariff) {
         switch ($tariff) {
-            case '2018 Активный (25М/300Р) - Архив 2018':
-                $cost = 250;
+            case '2018 Активный (25М/330Р) - Архив 2018':
+            case '2018 Отличный (100М/330Р) - Архив 2022':
+            case '2018 СуперХит (100М+ТВ/330Р) - Архив 2022':
+                $cost = 330;
                 break;
             case '2018 GePON 100 (100М+ТВ/650Р)':
                 $cost = 650;
@@ -175,7 +177,7 @@ class BGBilling {
                 break;
 
             default:
-                $cost = 300;
+                $cost = 350;
                 break;
         }
         return $cost;
@@ -187,7 +189,7 @@ class BGBilling {
     }
 
     public static function removeInet($args) {
-        $wCTVTariffs = array(76, 85, 101, 108, 109, 169);
+        $wCTVTariffs = array(76, 85, 101, 108, 109, 169, 275, 276);
         $sql = "
 SELECT t_cs.cid
 FROM contract_status t_cs
