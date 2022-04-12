@@ -23,6 +23,15 @@
  * @author Sergey Ilyin <developer@ilyins.ru>
  */
 class botOLBX24 {
+    private static function getMonthCost($tariff) {
+        $monthCost = 0;
+        preg_match_all('/\d*(?=Р)/', $tariff, $matches);
+        foreach ($matches[0] as $tariffCost) {
+            $monthCost += intval($tariffCost);
+        }
+        return $monthCost;
+    }
+
     private static function defaultMessage($type) {
         switch ($type) {
             case 'balance':
@@ -161,22 +170,9 @@ E-mail: mail@fialka.tv
                 break;
             case '3':
                 $responseText = "$contractBalanceText. Этого не достаточно для работы интернета.";
-                $tariffs330 = array (
-                    '2018 СуперХит (100М+ТВ/330Р) - Архив 2022',
-                    '2018 Отличный (100М/330Р) - Архив 2022'
-                    );
-                $tariffs350 = array (
-                    '22.03 Отличный (100М/350Р)',
-                    '22.03 СуперХит (100М+ТВ/350Р)'
-                    );
-                if (in_array($contractTariff, $tariffs330)) {
-                    $minPay = ceil(330 - $contractBalance);
-                    $responseText .= " Нужно доплатить минимум $minPay руб.";
-                }
-                if (in_array($contractTariff, $tariffs350)) {
-                    $minPay = ceil(350 - $contractBalance);
-                    $responseText .= " Нужно доплатить минимум $minPay руб.";
-                }
+                $monthCost = self::getMonthCost($contractTariff);
+                $minPay = ceil($monthCost - $contractBalance);
+                $responseText .= " Нужно доплатить минимум $minPay руб.";
                 break;
             case '4':
                 $responseText = "$contractBalanceText. Ваш договор приостановлен. Для возобновления услуг необходимо обратиться в телекомпанию.";

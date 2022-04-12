@@ -163,22 +163,10 @@ class BGBilling {
     }
 
     private static function getTariffCost($tariff) {
-        switch ($tariff) {
-            case '2018 Активный (25М/330Р) - Архив 2018':
-            case '2018 Отличный (100М/330Р) - Архив 2022':
-            case '2018 СуперХит (100М+ТВ/330Р) - Архив 2022':
-                $cost = 330;
-                break;
-            case '2018 GePON 100 (100М+ТВ/650Р)':
-                $cost = 650;
-                break;
-            case '2018 GePON 100 (100М/550Р)':
-                $cost = 550;
-                break;
-
-            default:
-                $cost = 350;
-                break;
+        $cost = 0;
+        preg_match_all('/\d*(?=Р)/', $tariff, $matches);
+        foreach ($matches[0] as $tariffCost) {
+            $cost += intval($tariffCost);
         }
         return $cost;
     }
