@@ -91,7 +91,7 @@ class botOLBX24 {
                 break;
             case 'speedTest':
                 $message = '
-Как правильно выполнить замер скорости подробно описано [URL=https://fialka.tv/question/zamer-skorosti/]тут[/URL].
+Как правильно выполнить замер скорости подробно описано [URL=https://fialka.tv/support/speedtest/]тут[/URL].
 ';
                 break;
             case 'visitCash':
