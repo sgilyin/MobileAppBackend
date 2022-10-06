@@ -196,7 +196,7 @@ E-mail: mail@fialka.tv
             $chatId = $param['data']['PARAMS']['CHAT_ID'];
             $inMessage = $param['data']['PARAMS']['MESSAGE'];
             #BALANCE START
-            preg_match('/аланс((\D+)?)?([A,B]\d{4,5}|\d{1,10})?/', $inMessage, $matchesBalance);
+            preg_match('/[aа][lл][aа][nн][cс]((\D+)?)?([A,B]\d{4,5}|\d{1,10})?/u', $inMessage, $matchesBalance);
             if ($matchesBalance) {
                 if ($matchesBalance[3]) {
                     $cid = (strlen($matchesBalance[3]) == 10) ? intval($matchesBalance[3])-1000000000 : $matchesBalance[3];
