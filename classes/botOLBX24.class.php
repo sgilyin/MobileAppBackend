@@ -34,6 +34,20 @@ class botOLBX24 {
 
     private static function defaultMessage($type) {
         switch ($type) {
+            case 'help':
+                $message = '
+/help - Список команд
+/balance <code> - Баланс по ЛС <code>
+/subscribe <code> - Подписка на уведомления по ЛС <code>
+/subscriptions - Список подписок на уведомления
+/unsubscribe <code> - Отписка от уведомлений по ЛС <code>
+/unsubscribe all - Отписка от уведомлений по всем ЛС
+
+баланс <code> - Баланс по ЛС <code>
+лицевой счет <улица> <дом> <квартира> - ЛС по адресу
+настроить роутер - Инструкция по настройке роутера
+';
+                break;
             case 'balance':
                 $message = '
 Баланс можно узнать следующим образом:
@@ -151,7 +165,9 @@ E-mail: mail@fialka.tv
                 break;
 
             default:
-                $message = 'Что-то пошло не так';
+                $message = '
+Что-то пошло не так. Отправьте команду /help для отображения списка возможных команд чат-бота
+';
                 break;
         }
         return $message;
@@ -191,6 +207,75 @@ E-mail: mail@fialka.tv
         return $result;
     }
 
+    private static function getMsngrPid($msngr) {
+        switch ($msngr) {
+            case 'telegrambot':
+                $pid = 54;
+                break;
+            case 'vkgroup':
+                $pid = 55;
+                break;
+
+            default:
+                break;
+        }
+        return $pid;
+    }
+
+    private static function subscribe($msngr, $uid, $cid) {
+        $address = preg_replace(
+            array(
+                '/\d{6}/', '/ г. Кумертау/', '/ \d* под./', '/ \d* эт./', '/,/', '/^ /'
+            ),
+            '', BGBilling::getContractParameter($cid, 12)->title);
+        $query = "INSERT INTO msngr_sbscrbrs SET cid=$cid, address='$address', messenger='$msngr', uid=$uid";
+        DB::query($query);
+        $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
+        $sqlResult = DB::query($query);
+        $uids = '';
+        while ($row = $sqlResult->fetch_object()) {
+            $uids .= $row->uid . ';';
+        }
+        BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
+        return "$address: уведомления подключены";
+    }
+
+    private static function unsubscribe($msngr, $uid, $cid) {
+        switch ($cid) {
+            case 'all':
+                $query = "DELETE FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+                $address = 'Все подписки';
+                break;
+
+            default:
+                $address = preg_replace(array(
+                '/\d{6}/', '/ г. Кумертау/', '/ \d* под./', '/ \d* эт./', '/,/', '/^ /'),
+                '', BGBilling::getContractParameter($cid, 12)->title);
+                $query = "DELETE FROM msngr_sbscrbrs WHERE cid=$cid AND address='$address' AND messenger='$msngr' AND uid=$uid";
+                break;
+        }
+        DB::query($query);
+        $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
+        $sqlResult = DB::query($query);
+        $uids = '';
+        while ($row = $sqlResult->fetch_object()) {
+            $uids .= $row->uid . ';';
+        }
+        BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
+        return "$address: уведомления отключены";
+    }
+
+    private static function subscriptions($msngr, $uid) {
+        $query = "SELECT address, cid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+        $sqlResult = DB::query($query);
+        $text = '';
+        while ($row = $sqlResult->fetch_object()) {
+            $payCode = 1000000000 + $row->cid;
+            $text .= $row->address . " (ЛС: $payCode)" . PHP_EOL;
+        }
+        return $text;
+    }
+
     public static function handler($param) {
         if ($param['data']['USER']['IS_EXTRANET'] == 'Y') {
             $chatId = $param['data']['PARAMS']['CHAT_ID'];
@@ -218,6 +303,42 @@ E-mail: mail@fialka.tv
                 }
             }
             #PAY CODE END
+            # BOT COMANDS START
+            if (preg_match('/\/(?<cmd>\w+) ?(?<code>\d+)? ?(?<all>all)?/', $inMessage, $sub)) {
+                $expld = explode('|', $param['data']['PARAMS']['CHAT_ENTITY_ID']);
+                $uid = $expld[2];
+                $msngr = $expld[0];
+                switch ($sub['cmd']) {
+                    case 'subscriptions':
+                        BX24::sendMessageOpenLine($chatId, 'Чат-бот:' .
+                            PHP_EOL . self::subscriptions($msngr, $uid));
+                        break;
+                    case 'subscribe':
+                        if (isset($sub['code'])) {
+                            $cid = $sub['code'] - 1000000000;
+                            BX24::sendMessageOpenLine($chatId, 'Чат-бот:' .
+                                PHP_EOL . self::subscribe($msngr, $uid, $cid));
+                        } else {
+                            BX24::sendMessageOpenLine($chatId, 'Чат-бот:'. PHP_EOL . 'Не указан лицевой счет');
+                        }
+                        break;
+                    case 'unsubscribe':
+                        if (isset($sub['code'])||isset($sub['all'])) {
+                        $cid = $sub['all'] ?? $sub['code'] - 1000000000;
+                        BX24::sendMessageOpenLine($chatId, 'Чат-бот:' .
+                            PHP_EOL . self::unsubscribe($msngr, $uid, $cid));
+                    } else {
+                        BX24::sendMessageOpenLine($chatId, 'Чат-бот:'. PHP_EOL .
+                            'Не указан лицевой счет или <all> для удаления всех подписок');
+                    }
+                        break;
+
+                    default:
+                        BX24::sendMessageOpenLine($chatId, 'Чат-бот:' . PHP_EOL . static::defaultMessage('help'));
+                        break;
+                }
+            }
+            # BOT COMANDS END
             #BOT ANSWER START
             $botCheck = array();
             #$botCheck[] = ['', '//'];
