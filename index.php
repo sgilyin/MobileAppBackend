@@ -52,15 +52,15 @@ switch (filter_input(INPUT_SERVER, 'CONTENT_TYPE')) {
         break;
     case 'application/x-www-form-urlencoded':
         botOLBX24::handler($requestData);
-#        file_put_contents('request.log', serialize($requestData));
 
     default:
-        if (filter_input(INPUT_SERVER, 'HTTP_USER_AGENT') == 'curl/7.74.0' && 
-            filter_input(INPUT_SERVER, 'REMOTE_ADDR') == '10.1.1.125') {
+        if ((filter_input(INPUT_SERVER, 'HTTP_USER_AGENT') == 'curl/7.74.0' && 
+            filter_input(INPUT_SERVER, 'REMOTE_ADDR') == '10.1.1.125')||(
+            filter_input(INPUT_SERVER, 'REMOTE_ADDR') == '10.2.2.10')) {
             $requestData['class']['method']($requestData['args']);
         } else {
             echo 'Silent is golden!';
         }
         break;
 }
-file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . filter_input(INPUT_SERVER, 'CONTENT_TYPE') . " | " . serialize($requestJson) . PHP_EOL, FILE_APPEND);
+#file_put_contents('request.log', date('c') . " | $requestID | $requestHost | " . filter_input(INPUT_SERVER, 'REQUEST_METHOD') . " | " . filter_input(INPUT_SERVER, 'CONTENT_TYPE') . " | " . serialize($requestData) . PHP_EOL, FILE_APPEND);
