@@ -243,25 +243,34 @@ E-mail: mail@fialka.tv
     private static function unsubscribe($msngr, $uid, $cid) {
         switch ($cid) {
             case 'all':
-                $query = "DELETE FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
                 $address = 'Все подписки';
+                $query = "SELECT cid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+                $sqlResult = DB::query($query);
+                while ($row = $sqlResult->fetch_object()) {
+                    $cids[] = $row->cid;
+                }
+                $query = "DELETE FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+                DB::query($query);
                 break;
 
             default:
                 $address = preg_replace(array(
                 '/\d{6}/', '/ г. Кумертау/', '/ \d* под./', '/ \d* эт./', '/,/', '/^ /'),
                 '', BGBilling::getContractParameter($cid, 12)->title);
+                $cids[] = $cid;
                 $query = "DELETE FROM msngr_sbscrbrs WHERE cid=$cid AND address='$address' AND messenger='$msngr' AND uid=$uid";
+                DB::query($query);
                 break;
         }
-        DB::query($query);
-        $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
-        $sqlResult = DB::query($query);
-        $uids = '';
-        while ($row = $sqlResult->fetch_object()) {
-            $uids .= $row->uid . ';';
+        foreach ($cids as $cid) {
+            $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
+            $sqlResult = DB::query($query);
+            $uids = '';
+            while ($row = $sqlResult->fetch_object()) {
+                $uids .= $row->uid . ';';
+            }
+            BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
         }
-        BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
         return "$address: уведомления отключены";
     }
 
@@ -272,6 +281,9 @@ E-mail: mail@fialka.tv
         while ($row = $sqlResult->fetch_object()) {
             $payCode = 1000000000 + $row->cid;
             $text .= $row->address . " (ЛС: $payCode)" . PHP_EOL;
+        }
+        if ($text == '') {
+            $text = 'Нет активных подписок';
         }
         return $text;
     }
