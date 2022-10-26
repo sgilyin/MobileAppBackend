@@ -367,4 +367,10 @@ WHERE tbl_contract.date2 IS NULL AND tbl_contract.fc=0 AND tbl_street.title='{$m
         return $result;
     }
 
+    public static function updateParameterTypeString($cid, $pid, $value) {
+        $url = sprintf('http://%s:8080/bgbilling/executer?module=contract&action=UpdateParameterType1&cid=%d&pid=%d&value=%s&user=%s&pswd=%s&authToSession=0',
+            BGB_HOST, $cid, $pid, $value, BGB_USER, BGB_PASSWORD);
+        file_get_contents($url);
+    }
+
 }
