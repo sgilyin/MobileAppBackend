@@ -38,10 +38,10 @@ class botOLBX24 {
                 $message = '
 /help - Список команд
 /balance <code> - Баланс по ЛС <code>
-/subscribe <code> - Подписка на уведомления по ЛС <code>
-/subscriptions - Список подписок на уведомления
-/unsubscribe <code> - Отписка от уведомлений по ЛС <code>
-/unsubscribe all - Отписка от уведомлений по всем ЛС
+/subscribe <code> - Подписка на уведомления по ЛС <code> (только ВК и ТГ)
+/subscriptions - Список подписок на уведомления (только ВК и ТГ)
+/unsubscribe <code> - Отписка от уведомлений по ЛС <code> (только ВК и ТГ)
+/unsubscribe all - Отписка от уведомлений по всем ЛС (только ВК и ТГ)
 
 баланс <code> - Баланс по ЛС <code>
 лицевой счет <улица> <дом> <квартира> - ЛС по адресу
@@ -223,69 +223,100 @@ E-mail: mail@fialka.tv
     }
 
     private static function subscribe($msngr, $uid, $cid) {
-        $address = preg_replace(
-            array(
-                '/\d{6}/', '/ г. Кумертау/', '/ \d* под./', '/ \d* эт./', '/,/', '/^ /'
-            ),
-            '', BGBilling::getContractParameter($cid, 12)->title);
-        $query = "INSERT INTO msngr_sbscrbrs SET cid=$cid, address='$address', messenger='$msngr', uid=$uid";
-        DB::query($query);
-        $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
-        $sqlResult = DB::query($query);
-        $uids = '';
-        while ($row = $sqlResult->fetch_object()) {
-            $uids .= $row->uid . ';';
-        }
-        BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
-        return "$address: уведомления подключены";
-    }
-
-    private static function unsubscribe($msngr, $uid, $cid) {
-        switch ($cid) {
-            case 'all':
-                $address = 'Все подписки';
-                $query = "SELECT cid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
-                $sqlResult = DB::query($query);
-                while ($row = $sqlResult->fetch_object()) {
-                    $cids[] = $row->cid;
-                }
-                $query = "DELETE FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+        switch ($msngr) {
+            case 'telegrambot':
+            case 'vkgroup':
+                $address = preg_replace(
+                    array('/\d{6}/', '/ г. Кумертау/', '/ \d* под./',
+                        '/ \d* эт./', '/,/', '/^ /'),
+                    '', BGBilling::getContractParameter($cid, 12)->title);
+                $query = "INSERT INTO msngr_sbscrbrs SET cid=$cid, address='$address', messenger='$msngr', uid=$uid";
                 DB::query($query);
+                $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
+                $sqlResult = DB::query($query);
+                $uids = '';
+                while ($row = $sqlResult->fetch_object()) {
+                    $uids .= $row->uid . ';';
+                }
+                BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
+                $result = "$address: уведомления подключены";
                 break;
 
             default:
-                $address = preg_replace(array(
-                '/\d{6}/', '/ г. Кумертау/', '/ \d* под./', '/ \d* эт./', '/,/', '/^ /'),
-                '', BGBilling::getContractParameter($cid, 12)->title);
-                $cids[] = $cid;
-                $query = "DELETE FROM msngr_sbscrbrs WHERE cid=$cid AND address='$address' AND messenger='$msngr' AND uid=$uid";
-                DB::query($query);
+                $result = 'Данная функция доступна только в Телеграм и Вконтакте';
                 break;
         }
-        foreach ($cids as $cid) {
-            $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
-            $sqlResult = DB::query($query);
-            $uids = '';
-            while ($row = $sqlResult->fetch_object()) {
-                $uids .= $row->uid . ';';
-            }
-            BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
+        
+        return $result;
+    }
+
+    private static function unsubscribe($msngr, $uid, $cid) {
+        switch ($msngr) {
+            case 'telegrambot':
+            case 'vkgroup':
+                switch ($cid) {
+                    case 'all':
+                        $address = 'Все подписки';
+                        $query = "SELECT cid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+                        $sqlResult = DB::query($query);
+                        while ($row = $sqlResult->fetch_object()) {
+                            $cids[] = $row->cid;
+                        }
+                        $query = "DELETE FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+                        DB::query($query);
+                        break;
+
+                    default:
+                        $address = preg_replace(array(
+                        '/\d{6}/', '/ г. Кумертау/', '/ \d* под./', '/ \d* эт./', '/,/', '/^ /'),
+                        '', BGBilling::getContractParameter($cid, 12)->title);
+                        $cids[] = $cid;
+                        $query = "DELETE FROM msngr_sbscrbrs WHERE cid=$cid AND address='$address' AND messenger='$msngr' AND uid=$uid";
+                        DB::query($query);
+                        break;
+                }
+                foreach ($cids as $cid) {
+                    $query = "SELECT uid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND cid=$cid";
+                    $sqlResult = DB::query($query);
+                    $uids = '';
+                    while ($row = $sqlResult->fetch_object()) {
+                        $uids .= $row->uid . ';';
+                    }
+                    BGBilling::updateParameterTypeString($cid, self::getMsngrPid($msngr), $uids);
+                }
+                $result = "$address: уведомления отключены";
+                break;
+
+            default:
+                $result = 'Данная функция доступна только в Телеграм и Вконтакте';
+                break;
         }
-        return "$address: уведомления отключены";
+        
+        return $result;
     }
 
     private static function subscriptions($msngr, $uid) {
-        $query = "SELECT address, cid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
-        $sqlResult = DB::query($query);
-        $text = '';
-        while ($row = $sqlResult->fetch_object()) {
-            $payCode = 1000000000 + $row->cid;
-            $text .= $row->address . " (ЛС: $payCode)" . PHP_EOL;
+        switch ($msngr) {
+            case 'telegrambot':
+            case 'vkgroup':
+                $query = "SELECT address, cid FROM msngr_sbscrbrs WHERE messenger='$msngr' AND uid=$uid";
+                $sqlResult = DB::query($query);
+                $result = '';
+                while ($row = $sqlResult->fetch_object()) {
+                    $payCode = 1000000000 + $row->cid;
+                    $result .= $row->address . " (ЛС: $payCode)" . PHP_EOL;
+                }
+                if ($result == '') {
+                    $result = 'Нет активных подписок';
+                }
+                break;
+
+            default:
+                $result = 'Данная функция доступна только в Телеграм и Вконтакте';
+                break;
         }
-        if ($text == '') {
-            $text = 'Нет активных подписок';
-        }
-        return $text;
+        
+        return $result;
     }
 
     public static function handler($param) {
@@ -297,11 +328,15 @@ E-mail: mail@fialka.tv
             if ($matchesBalance) {
                 if ($matchesBalance[3]) {
                     $cid = (strlen($matchesBalance[3]) == 10) ? intval($matchesBalance[3])-1000000000 : $matchesBalance[3];
-                    BX24::sendMessageOpenLine($chatId, 'Чат-бот:'. PHP_EOL . static::getResponseBalanceText($cid));
-#                    BX24::finishSessionOpenLine($chatId);
+                    $message = sprintf('Чат-бот:%s%s%s%s%s',
+                        PHP_EOL, self::getResponseBalanceText($cid),
+                        PHP_EOL, PHP_EOL, '/help - все возможности чат-бота');
                 } else {
-                    BX24::sendMessageOpenLine($chatId, static::defaultMessage('balance'));
+                    $message = sprintf('Чат-бот:%s%s%s%s%s',
+                        PHP_EOL, self::defaultMessage('balance'),
+                        PHP_EOL, PHP_EOL, '/help - все возможности чат-бота');
                 }
+                BX24::sendMessageOpenLine($chatId, $message);
             }
             #BALANCE END
             #PAY CODE START
@@ -309,10 +344,17 @@ E-mail: mail@fialka.tv
             if ($matchesPayCode) {
                 if ($matchesPayCode['street']) {
                     $paycode = BGBilling::getContractPayCode($matchesPayCode);
-                    BX24::sendMessageOpenLine($chatId, 'Чат-бот:'. PHP_EOL . $paycode);
+                    $message = sprintf('Чат-бот:%s%s%s%s%s',
+                        PHP_EOL, $paycode, PHP_EOL, PHP_EOL,
+                        '/help - все возможности чат-бота');
+                    #BX24::sendMessageOpenLine($chatId, 'Чат-бот:'. PHP_EOL . $paycode);
                 } else {
-                    BX24::sendMessageOpenLine($chatId, static::defaultMessage('payCode'));
+                    $message = sprintf('Чат-бот:%s%s%s%s%s',
+                        PHP_EOL, self::defaultMessage('payCode'), PHP_EOL, PHP_EOL,
+                        '/help - все возможности чат-бота');
+                    #BX24::sendMessageOpenLine($chatId, static::defaultMessage('payCode'));
                 }
+                BX24::sendMessageOpenLine($chatId, $message);
             }
             #PAY CODE END
             # BOT COMANDS START
