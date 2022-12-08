@@ -197,7 +197,7 @@ LIMIT 1000
             file_put_contents(date("Ymd") . '.log', PHP_EOL . "Working with cid $cid ({$args['days']} days):" . PHP_EOL, FILE_APPEND);
             $inetServList = self::inetServList($cid);
             for ($inetServItems = 0; $inetServItems < count($inetServList->data->return); $inetServItems++) {
-                self::changeContractStatus($cid, 4, "Time | {$inetServList->data->return[$inetServItems]->deviceTitle} | {$inetServList->data->return[$inetServItems]->interfaceTitle}");
+                self::changeContractStatus($cid, 3, "Time | {$inetServList->data->return[$inetServItems]->deviceTitle} | {$inetServList->data->return[$inetServItems]->interfaceTitle}");
                 self::inetServDelete($inetServList->data->return[$inetServItems]->id, true);
             }
             $urlDeleteInet = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' . BGB_USER .
