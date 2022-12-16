@@ -141,9 +141,8 @@ E-mail: mail@fialka.tv
                 break;
             case 'schedule':
                 $message = '
-Пн - Пт: с 09:00 до 18:00
-Сб: с 10:00 до 14:00
-Вс: выходной
+Будни: с 09:00 до 18:00
+Выходные: с 10:00 до 14:00
 ';
                 break;
             case 'tariff':
