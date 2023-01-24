@@ -175,17 +175,18 @@ E-mail: mail@fialka.tv
     private static function getResponseBalanceText($cid) {
         $contractStatus = BGBilling::getContract($cid)->status;
         $contractAddress = preg_replace('/(\d{0,6}, г. Кумертау, )?(, \d* под.)?(, \d* эт\.)?/', '', BGBilling::getContractParameter($cid, 12)->title);
-        $contractTariff = BGBilling::getContractTariff($cid);
+//        $contractTariff = BGBilling::getContractTariff($cid);
         $contractBalance = BGBilling::getCurrentBalance($cid);
-        $countDays = BGBilling::getCountDays($contractTariff, $contractBalance);
+        $countDays = BGBilling::getCountDays($cid, $contractBalance);
         $contractBalanceText = static::getTextBalance($contractBalance);
         switch ($contractStatus) {
             case '0':
-                $responseText = ($countDays > -1) ? "$contractBalanceText. Этого хватит примерно на $countDays дн." : "$contractBalanceText";
+                $responseText = ($countDays > -1) ? "$contractBalanceText. Количество дней до блокировки: $countDays." : "$contractBalanceText";
                 break;
             case '3':
                 $responseText = "$contractBalanceText. Этого не достаточно для работы интернета.";
-                $monthCost = self::getMonthCost($contractTariff);
+//                $monthCost = self::getMonthCost($contractTariff);
+                $monthCost = BGBilling::getContractCost($cid);
                 $minPay = ceil($monthCost - $contractBalance);
                 $responseText .= " Нужно доплатить минимум $minPay руб.";
                 break;
@@ -202,7 +203,7 @@ E-mail: mail@fialka.tv
 
     private static function getTextBalance($balance) {
         $exp = explode('.', $balance);
-        $result = ($exp[1]) ? "$exp[0] руб $exp[1] коп" : "$exp[0] руб";
+        $result = ($exp[1]) ? "$exp[0] руб. $exp[1] коп" : "$exp[0] руб";
         return $result;
     }
 

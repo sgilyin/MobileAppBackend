@@ -34,7 +34,7 @@ class Yandex {
         $contractAddress = preg_replace('/(\d{0,6}, г. Кумертау, )?(, \d* под.)?(, \d* эт\.)?/', '', BGBilling::getContractParameter($cid, 12)->title);
         $contractTariff = BGBilling::getContractTariff($cid);
         $contractBalance = BGBilling::getCurrentBalance($cid);
-        $countDays = BGBilling::getCountDays($contractTariff, $contractBalance);
+        $countDays = BGBilling::getCountDays($cid, $contractBalance);
         $contractBalanceText = static::getTextBalance($contractBalance);
         switch ($contractStatus) {
             case '0':

@@ -162,17 +162,28 @@ class BGBilling {
         return $last_pay->date . " | " . $last_pay->sum . ' руб.';
     }
 
-    private static function getTariffCost($tariff) {
+    public static function getContractCost($cid) {
         $cost = 0;
-        preg_match_all('/\d*(?=Р)/', $tariff, $matches);
-        foreach ($matches[0] as $tariffCost) {
-            $cost += intval($tariffCost);
+        $query = "
+SELECT SUM(REGEXP_SUBSTR( t_mn.data,'(?<=&).*(?=%)')) cost
+FROM contract_tariff t_ct
+LEFT JOIN tariff_plan t_tp ON t_tp.id = t_ct.tpid
+LEFT JOIN module_tariff_tree t_mtt ON t_mtt.tree_id = t_tp.tree_id AND t_mtt.mid = 7
+LEFT JOIN mtree_node t_mn ON t_mn.mtree_id = t_mtt.id AND t_mn.type REGEXP 'cost'
+WHERE t_ct.date1 <= CURDATE() AND t_ct.date2 IS NULL AND t_ct.cid=$cid
+";
+        $url = 'http://' . BGB_HOST . ':8080/bgbilling/executer?user=' .
+            BGB_USER . '&pswd=' . BGB_PASSWORD .
+            '&module=sqleditor&base=main&action=SQLEditor&sql=' . urlencode($query);
+        $xml = simplexml_load_string(file_get_contents($url));
+        for ($i = 0; $i < count($xml->table->data->row); $i++) {
+            $cost = (int) $xml->table->data->row[$i]->attributes()->row0;
         }
         return $cost;
     }
 
-    public static function getCountDays($tariff, $balance) {
-        $cost = self::getTariffCost($tariff);
+    public static function getCountDays($cid, $balance) {
+        $cost = self::getContractCost($cid);
         return floor($balance / ($cost / intval(date("t"))) - 1);
     }
 
