@@ -49,4 +49,19 @@ class BX24 {
                 );
         return static::callMethod('imopenlines.bot.session.finish', $bx24Data);
     }
+
+    public static function imbotCommandRegister($param) {
+        $bx24Data = http_build_query($param);
+        return static::callMethod('imbot.command.register', $bx24Data);
+    }
+
+    public static function imbotCommandUnregister($commandId, $clientId = BX24_BOT_CLIENT_ID) {
+        $bx24Data = http_build_query(
+            array(
+                'COMMAND_ID' => $commandId,
+                'CLIENT_ID' => $clientId,
+            )
+        );
+        return static::callMethod('imbot.command.unregister', $bx24Data);
+    }
 }

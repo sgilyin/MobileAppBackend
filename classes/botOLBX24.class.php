@@ -189,8 +189,13 @@ class botOLBX24 {
     }
 
     public static function handler($param) {
+        if ($param['event'] == 'ONIMBOTJOINCHAT') {
+            foreach (self::getBotCommands() as $command) {
+                BX24::imbotCommandRegister($command);
+            }
+        }
         $chatId = $param['data']['PARAMS']['CHAT_ID'];
-        $inMessage = $param['data']['PARAMS']['MESSAGE'];
+        $inMessage = $param['data']['PARAMS']['MESSAGE'] ?? '';
         # BOT COMANDS START
         if (preg_match('/\/(?<cmd>\w+) ?(?<code>\d{10})? ?(?<all>all)?(?<address>.*)/', $inMessage, $sub)) {
             $expld = explode('|', $param['data']['PARAMS']['CHAT_ENTITY_ID']);
@@ -297,5 +302,34 @@ class botOLBX24 {
             }
             #BOT ANSWER END
         }
+    }
+
+    private function getBotCommands() {
+        $commands[0]->COMMAND = 'help';
+        $commands[0]->LANG[0]->TITLE = 'Список команд бота';
+        $commands[0]->LANG[0]->PARAMS = '';
+        $commands[1]->COMMAND = 'balance';
+        $commands[1]->LANG[0]->TITLE = 'Баланс по ЛС';
+        $commands[1]->LANG[0]->PARAMS = 'paycode';
+        $commands[2]->COMMAND = 'paycode';
+        $commands[2]->LANG[0]->TITLE = 'Код для оплаты';
+        $commands[2]->LANG[0]->PARAMS = 'address';
+        $commands[3]->COMMAND = 'router_setup';
+        $commands[3]->LANG[0]->TITLE = 'Инструкция по настройке роутера';
+        $commands[3]->LANG[0]->PARAMS = '';
+        $commands[4]->COMMAND = 'speedtest';
+        $commands[4]->LANG[0]->TITLE = 'Инструкция по замеру скорости интернета';
+        $commands[4]->LANG[0]->PARAMS = '';
+        $commands[5]->COMMAND = 'diagnostics_inet';
+        $commands[5]->LANG[0]->TITLE = 'Инструкция по диагностике неисправностей интернета';
+        $commands[5]->LANG[0]->PARAMS = '';
+        for ($index = 0; $index < count($commands); $index++) {
+            $commands[$index]->BOT_ID = BX24_BOT_ID;
+            $commands[$index]->COMMON = 'Y';
+            $commands[$index]->CLIENT_ID = BX24_BOT_CLIENT_ID;
+            $commands[$index]->LANG[0]->LANGUAGE_ID = 'ru';
+            $commands[$index]->EVENT_COMMAND_ADD = 'https://backend.fialka.tv';
+        }
+        return json_decode(json_encode($commands), true);
     }
 }

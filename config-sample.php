@@ -9,6 +9,10 @@ define('BGB_PASSWORD', '<Enter here>');
 define('CRM_HOST', '<Enter here>');
 define('CRM_SECRET', '<Enter here>');
 
+# Bitrix24 Bot Config
+define('BX24_BOT_ID', '<Enter here>');
+define('BX24_BOT_CLIENT_ID', '<Enter here>');
+
 # Telegram Bot Config
 define('TELEGRAM_BOT_TOKEN', '<Enter here>');
 
